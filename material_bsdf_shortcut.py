@@ -78,6 +78,7 @@ def SetImageData(dir):
         ['normal-ogl','normal'],
         ['alpha']
         #### Add more textures here ####
+    ]
         
     # assumes prefix/postfix same for all once one is found
     prefix = ''
