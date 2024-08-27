@@ -1,7 +1,7 @@
 bl_info = {
     "name": "BSDF Shortcut",
     "author": "Luc Harris",
-    "version": (0, 0, 1),
+    "version": (0, 0, 2),
     "blender": (2, 93, 0),
     "location": "Propertial > Material > BSDF Setup Shortcut",
     "description": "Loads textures from a directory into a default BSDF material setup.\nAssumes a texture pack is organised into a directory and uses file name postfix convention from textures.com\nMaterial Settings such as blend mode and shadow remain defaulted",
@@ -45,6 +45,7 @@ def BsdfNode(nodes, type = "", existingName = "", useExisting = False, x = 0, y 
 # sets image data with node properties
 def SetImageData(dir):
     # data for images
+    # todo remove first elements (and reassign ImageSetID enum) 
     imageSet = [
             # 0             # 1      # 2             # 3            # 4
         ['_albedo.',        '',  'sRGB',         'Color1',       Nodes.MIX ],
@@ -60,17 +61,57 @@ def SetImageData(dir):
         #### Add more textures here ####
     ]
     
-    #
+    # search prefix
+    prefixArray = ['-','_']
+    # search postfix
+    postfixArray = ['-','_','.']
+    # NOTE: Add appropriate terms here. Longer terms before shorter terms eg 'roughness','rough'
+    termArray = [
+        ['albedo','diffuse'],
+        ['ambient','occusion','ao'],
+        ['metallic'], # not 'metal' as may be desc of texture
+        ['specular','spec'],
+        ['roughness','rough'],
+        ['translucency','transl'],
+        ['emissive','emission','emit'],
+        ['height'],
+        ['normal-ogl','normal'],
+        ['alpha']
+        #### Add more textures here ####
+        
+    # assumes prefix/postfix same for all once one is found
+    prefix = ''
+    postfix = ''
     
     # creates a list of relevant file paths
-    if os.path.isdir(dir):                   # validation
-        for i in os.listdir(dir):            #  everything in folder folder
-            file = dir+i                     #
-            if os.path.isfile(file):            # if is file
-                for j in imageSet:              # 
-                    if j[ImageSetID.LOOKUP] in i:
-                        j[ImageSetID.PATH] = i
-    
+    if os.path.isdir(dir):                                   # validation
+        for filename in os.listdir(dir):                     #  everything in folder
+            file = dir+filename                              #
+            if os.path.isfile(file):                         # if is file
+                for i, image in enumerate(imageSet):         # 
+                    for term in termArray[i]:                # different terms
+                        searchTerm = ''
+                        # assumes prefix/postfix same for all once one is found
+                        if len(prefix) == 0 and len(postfix) == 0: 
+                            # finds 
+                            preI = 0
+                            postI = 0
+                            while preI < len(prefixArray) and len(prefix) == 0:
+                                while postI < len(postfixArray) and len(postfix) == 0:
+                                    searchTerm = prefixArray[preI] + term + postfixArray[postI]
+                                    # assign prefix/postfix or reset search term
+                                    if searchTerm.lower() in filename.lower():
+                                        prefix = prefixArray[preI]
+                                        postfix = postfixArray[postI]
+                                    else:
+                                        searchTerm = ''
+                                    preI += 1
+                                postI += 1
+                        else:
+                            searchTerm = pre + term + post
+
+                        if searchTerm.lower() in filename.lower():
+                            image[ImageSetID.PATH] = filename
     return imageSet
 
 # adds additional nodes for bsdf material  
@@ -142,7 +183,7 @@ class BsdfShortcutData(bpy.types.PropertyGroup):
 class NODE_OT_bsdf_shortcut(bpy.types.Operator):
     """Adds a new BSDF material with with textures from directory"""
     bl_idname = "node.bsdf_shortcut"
-    bl_label = "Add Textured Material From Directory"
+    bl_label = "New Material From Directory"
     bl_options = {'REGISTER', 'UNDO'}
     
     def execute(self, context):
